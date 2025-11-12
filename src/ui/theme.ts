@@ -15,14 +15,14 @@ export function brandGradient(text: string): string {
   return chars.map((c,i)=>chalk.hex(palette[i%palette.length])(c)).join('');
 }
 
-export function lerpColorHex(a: string, b: string, t: number): string {
+export function lerpColorHex(aHex: string, bHex: string, t: number): string {
   function hexToRgb(h: string){ const n=parseInt(h.replace('#',''),16); return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
-  const A = hexToRgb(a), B = hexToRgb(b);
-  const r = Math.round(A.r + (B.r-A.r)*t);
-  const g = Math.round(A.g + (B.g-A.g)*t);
-  const b = Math.round(A.b + (B.b-A.b)*t);
+  const A = hexToRgb(aHex), B = hexToRgb(bHex);
+  const rr = Math.round(A.r + (B.r-A.r)*t);
+  const gg = Math.round(A.g + (B.g-A.g)*t);
+  const bb = Math.round(A.b + (B.b-A.b)*t);
   const s = (x:number)=>x.toString(16).padStart(2,'0');
-  return `#${s(r)}${s(g)}${s(b)}`;
+  return `#${s(rr)}${s(gg)}${s(bb)}`;
 }
 
 export function pulse(text: string, t: number = Date.now()): string {
@@ -30,4 +30,3 @@ export function pulse(text: string, t: number = Date.now()): string {
   const c = lerpColorHex('#94a3b8', '#e2e8f0', phase);
   return chalk.hex(c)(text);
 }
-
