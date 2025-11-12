@@ -3,6 +3,7 @@ import {Box, Text, useApp, useInput, useStdin, useStdout} from 'ink';
 import * as Engine from '../engine/index.js';
 import {Board, OverlayDot} from './board.js';
 import {colors, brandGradient, pulse} from './theme.js';
+import chalk from 'chalk';
 
 type Screen = 'splash' | 'menu' | 'game';
 type Overlay = 'none' | 'gameover' | 'pause' | 'menu';
