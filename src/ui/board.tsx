@@ -1,4 +1,4 @@
-import React, {useMemo, useRef} from 'react';
+import React, {useMemo} from 'react';
 import {Text} from 'ink';
 import chalk from 'chalk';
 import type {EngineState, Direction} from '../engine/index.js';
@@ -10,7 +10,9 @@ function nextOf(x:number,y:number,dir:Direction,w:number,h:number,wrap:boolean){
   return {x:nx,y:ny};
 }
 
-export function Board({state, cellWidth=2}:{state: EngineState; cellWidth?: number}){
+export type OverlayDot = { x:number; y:number; color:string; ch?:string };
+
+export function Board({state, cellWidth=2, overlays=[]}:{state: EngineState; cellWidth?: number; overlays?: OverlayDot[]}){
   const {w, h, snake, food} = state;
   const alpha = state.timeAccMs / state.stepMs; // 0..1 time to next step
 
@@ -34,6 +36,11 @@ export function Board({state, cellWidth=2}:{state: EngineState; cellWidth?: numb
       grid[seg.y][seg.x] = chalk.hex(c)(block.repeat(cellWidth));
     }
 
+    // Effects overlays (particles/ripples)
+    for (const p of overlays) {
+      if (p.x>=0 && p.x<w && p.y>=0 && p.y<h) grid[p.y][p.x] = chalk.hex(p.color)((p.ch ?? '•').repeat(cellWidth));
+    }
+
     // Head ghost toward next cell for smoother perception
     const head = snake[0];
     const n = nextOf(head.x, head.y, state.lastDir, w, h, state.wrap);
@@ -45,7 +52,7 @@ export function Board({state, cellWidth=2}:{state: EngineState; cellWidth?: numb
     }
 
     return grid.map(row => row.join('')).join('\n');
-  }, [w,h,snake,food,cellWidth,state.wrap,state.lastDir,state.timeAccMs,state.stepMs]);
+  }, [w,h,snake,food,cellWidth,state.wrap,state.lastDir,state.timeAccMs,state.stepMs,overlays]);
 
   return <Text>{out}</Text>;
 }
