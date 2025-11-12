@@ -213,37 +213,45 @@ function Game({onExit, theme, unicode, themeName, setThemeName, reducedMotion}:{
         <Text>  </Text>
         <Text color="#94a3b8">⏻ Q quit</Text>
       </Box>
-      <Box flexGrow={1} alignItems="center" justifyContent="center">
-        <Box borderStyle="round" borderColor={theme.muted} paddingX={1} paddingY={0}>
-          <Board state={state} cellWidth={2} overlays={overlayDots} theme={theme} unicode={unicode} ambient={ambient} />
-        </Box>
+      <Box flexGrow={1} alignItems="center" justifyContent="center" position="relative">
+        {(() => {
+          const boxW = state.w * 2 + 4; // cellWidth*state.w + borders+padding
+          const boxH = state.h + 2;     // rows + borders
+          return (
+            <>
+              <Box borderStyle="round" borderColor={theme.muted} paddingX={1} paddingY={0}>
+                <Board state={state} cellWidth={2} overlays={overlayDots} theme={theme} unicode={unicode} ambient={ambient} />
+              </Box>
+
+              {showGameOver && (
+                <Box position="absolute" width={boxW} height={boxH} alignItems="center" justifyContent="center">
+                  <Modal title={brandGradient('Game Over')} width={Math.min(56, boxW-4)} borderColor={theme.muted}>
+                    <Text>Score {state.score}</Text>
+                    <Text>Press Enter to play again</Text>
+                    <Text>Press M for menu</Text>
+                    <Text dimColor>Q to quit</Text>
+                  </Modal>
+                </Box>
+              )}
+
+              {showPause && (
+                <Box position="absolute" width={boxW} height={boxH} alignItems="center" justifyContent="center">
+                  <Modal title={brandGradient('Paused')} width={Math.min(56, boxW-4)} borderColor={theme.muted}>
+                    <Text>Enter resume</Text>
+                    <Text>R restart</Text>
+                    <Text>M menu</Text>
+                    <Text dimColor>Q quit</Text>
+                  </Modal>
+                </Box>
+              )}
+            </>
+          );
+        })()}
       </Box>
-
-      {showGameOver && (
-        <Box position="absolute" width={w} height={h} alignItems="center" justifyContent="center">
-          <Modal title={brandGradient('Game Over')} width={48}>
-            <Text dimColor>Score {state.score}</Text>
-            <Text>Enter restart</Text>
-            <Text>M menu</Text>
-            <Text dimColor>Q quit</Text>
-          </Modal>
-        </Box>
-      )}
-
-      {showPause && (
-        <Box position="absolute" width={w} height={h} alignItems="center" justifyContent="center">
-          <Modal title={brandGradient('Paused')} width={48}>
-            <Text>Enter resume</Text>
-            <Text>R restart</Text>
-            <Text>M menu</Text>
-            <Text dimColor>Q quit</Text>
-          </Modal>
-        </Box>
-      )}
 
       {showSettings && (
         <Box position="absolute" width={w} height={h} alignItems="center" justifyContent="center">
-          <Modal title={brandGradient('Settings')} width={56}>
+          <Modal title={brandGradient('Settings')} width={56} borderColor={theme.muted}>
             <Text>Wrap: {state.wrap ? 'On' : 'Off'}  (W toggle)</Text>
             <Text>Speed: {(1000/state.stepMs).toFixed(0)} cps  (+ / -)</Text>
             <Text>Theme: {themeName}  ({'<' } / {'>' } to cycle)</Text>
