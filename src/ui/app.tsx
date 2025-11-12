@@ -75,12 +75,18 @@ function Game({onExit}:{onExit:()=>void}){
   const {exit} = useApp();
   const {stdout} = useStdout();
   const {isRawModeSupported} = useStdin();
+  const cols = stdout?.columns ?? 80;
+  const rows = stdout?.rows ?? 24;
+  const cellW = 2;
+  const boardW = Math.max(24, Math.min(54, Math.floor((cols - 12) / cellW)));
+  const boardH = Math.max(16, Math.min(28, rows - 8));
 
-  const [state, setState] = useState(() => Engine.initEngine({ width: 36, height: 20, wrap: true, speed: 10 }));
+  const [state, setState] = useState(() => Engine.initEngine({ width: boardW, height: boardH, wrap: true, speed: 12 }));
   const [overlay, setOverlay] = useState<Overlay>('none');
   const lastScore = useRef<number>(0);
   const lastFood = useRef<{x:number;y:number} | null>(null);
   const [ripple, setRipple] = useState<{x:number;y:number;r:number;max:number;color:string}|null>(null);
+  const [displayScore, setDisplayScore] = useState(0);
   const last = useRef<number>(Date.now());
   const running = useRef(true);
 
@@ -94,6 +100,7 @@ function Game({onExit}:{onExit:()=>void}){
       if (ripple) {
         setRipple(r => r ? ({...r, r: r.r + 0.75}) : r);
       }
+      setDisplayScore(s => (s < state.score ? Math.min(state.score, s + 1) : s));
     }, 16); // ~60 FPS render cadence; engine may step multiple times
     return () => { running.current = false; clearInterval(id); };
   }, [overlay, ripple]);
@@ -105,14 +112,14 @@ function Game({onExit}:{onExit:()=>void}){
     if (!state.alive) setOverlay('gameover');
 
     if (overlay==='gameover') {
-      if (key.return) { setState(() => Engine.initEngine({ width: state.w, height: state.h, wrap: state.wrap, speed: 10 })); setOverlay('none'); }
+      if (key.return) { setState(() => Engine.initEngine({ width: state.w, height: state.h, wrap: state.wrap, speed: 12 })); setDisplayScore(0); setOverlay('none'); }
       if (lower==='m') onExit();
       return;
     }
 
     if (overlay==='pause') {
       if (key.return || lower==='p') { setOverlay('none'); return; }
-      if (lower==='r') { setState(() => Engine.initEngine({ width: state.w, height: state.h, wrap: state.wrap, speed: 10 })); setOverlay('none'); return; }
+      if (lower==='r') { setState(() => Engine.initEngine({ width: state.w, height: state.h, wrap: state.wrap, speed: 12 })); setDisplayScore(0); setOverlay('none'); return; }
       if (lower==='m') { onExit(); return; }
       return;
     }
@@ -129,12 +136,12 @@ function Game({onExit}:{onExit:()=>void}){
     else if (key.rightArrow) setState(s => Engine.handleInput(s, 'right'));
     else if (key.upArrow) setState(s => Engine.handleInput(s, 'up'));
     else if (key.downArrow) setState(s => Engine.handleInput(s, 'down'));
-    else if (lower==='r') { setState(() => Engine.initEngine({ width: state.w, height: state.h, wrap: state.wrap, speed: 10 })); setOverlay('none'); }
+    else if (lower==='r') { setState(() => Engine.initEngine({ width: state.w, height: state.h, wrap: state.wrap, speed: 12 })); setDisplayScore(0); setOverlay('none'); }
     else if (lower==='s') { setOverlay('settings'); }
   }, { isActive: isRawModeSupported });
 
-  const w = stdout?.columns ?? 80;
-  const h = stdout?.rows ?? 24;
+  const w = cols;
+  const h = rows;
 
   // Spawn ripple when score increases
   if (state.score !== lastScore.current) {
@@ -171,7 +178,7 @@ function Game({onExit}:{onExit:()=>void}){
       <Box height={1}>
         <Text color={colors.chrome}>▣ Snake</Text>
         <Text>  </Text>
-        <Text dimColor>Score {state.score}</Text>
+        <Text dimColor>Score {displayScore}</Text>
         <Text>  </Text>
         <Text color={overlay==='pause' ? '#f59e0b' : '#94a3b8'}>⏯ P pause</Text>
         <Text>  </Text>

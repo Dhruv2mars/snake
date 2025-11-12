@@ -7,6 +7,9 @@ export const colors = {
   snakeTail: '#0ea5e9',
   food: '#ff6b6b',
   grid: '#22d3ee',
+  badgePlaying: '#22c55e',
+  badgePaused: '#f59e0b',
+  badgeOver: '#ef4444',
 };
 
 export function brandGradient(text: string): string {
