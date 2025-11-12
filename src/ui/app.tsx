@@ -19,7 +19,7 @@ export function App(){
   const unicode = caps.unicode && theme.unicodePreferred;
   return screen==='splash' ? <Splash onDone={() => setScreen('menu')} />
     : screen==='menu' ? <Menu onStart={() => setScreen('game')} theme={theme} />
-    : <Game onExit={() => setScreen('menu')} theme={theme} unicode={unicode} themeName={themeName} setThemeName={setThemeName} />;
+    : <Game onExit={() => setScreen('menu')} theme={theme} unicode={unicode} themeName={themeName} setThemeName={setThemeName} reducedMotion={caps.reducedMotion} />;
 }
 
 function cycleTheme(curr: string, dir: 1|-1){
@@ -84,7 +84,7 @@ function Menu({onStart, theme}:{onStart:()=>void; theme: Theme}){
   );
 }
 
-function Game({onExit, theme, unicode, themeName, setThemeName}:{onExit:()=>void; theme: Theme; unicode: boolean; themeName: string; setThemeName: React.Dispatch<React.SetStateAction<any>>}){
+function Game({onExit, theme, unicode, themeName, setThemeName, reducedMotion}:{onExit:()=>void; theme: Theme; unicode: boolean; themeName: string; setThemeName: React.Dispatch<React.SetStateAction<any>>; reducedMotion: boolean}){
   const {exit} = useApp();
   const {stdout} = useStdout();
   const {isRawModeSupported} = useStdin();
@@ -115,7 +115,7 @@ function Game({onExit, theme, unicode, themeName, setThemeName}:{onExit:()=>void
       if (ripple) {
         setRipple(r => r ? ({...r, r: r.r + 0.75}) : r);
       }
-      if (!caps.reducedMotion) {
+      if (!reducedMotion) {
         setParticles(ps => stepParticles(ps, state.w, state.h));
         setAmbient(a => (a + 0.02) % 1);
       }
@@ -169,7 +169,7 @@ function Game({onExit, theme, unicode, themeName, setThemeName}:{onExit:()=>void
     if (state.score > lastScore.current && lastFood.current) {
       const f = lastFood.current;
       setRipple({x:f.x, y:f.y, r:0, max:6, color:'#ffd166'});
-      if (!caps.reducedMotion) setParticles(ps => ps.concat(spawnBurst(f.x, f.y, '#ffd166', 18)));
+      if (!reducedMotion) setParticles(ps => ps.concat(spawnBurst(f.x, f.y, '#ffd166', 18)));
     }
     lastScore.current = state.score;
   }
