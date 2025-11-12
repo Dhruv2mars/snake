@@ -10,10 +10,6 @@ type Overlay = 'none' | 'gameover' | 'pause';
 
 export function App(){
   const [screen, setScreen] = useState<Screen>('splash');
-  useEffect(() => {
-    const t = setTimeout(() => setScreen('menu'), 900);
-    return () => clearTimeout(t);
-  }, []);
   return screen==='splash' ? <Splash onDone={() => setScreen('menu')} />
     : screen==='menu' ? <Menu onStart={() => setScreen('game')} />
     : <Game onExit={() => setScreen('menu')} />;
@@ -21,13 +17,32 @@ export function App(){
 
 function Splash({onDone}:{onDone:()=>void}){
   const {stdout} = useStdout();
-  useEffect(() => { const t = setTimeout(onDone, 1200); return () => clearTimeout(t); }, [onDone]);
+  const {isRawModeSupported} = useStdin();
+  const [tick, setTick] = useState(0);
+  const startedAt = useRef<number>(Date.now());
+  const minShowMs = 750; // ensure it feels intentional
+  const totalMs = 1500;  // full animation length
+  useEffect(() => {
+    const id = setInterval(() => setTick(t=>t+1), 80);
+    const t = setTimeout(() => onDone(), totalMs);
+    return () => { clearInterval(id); clearTimeout(t); };
+  }, [onDone]);
+  useInput((_, __) => {
+    const elapsed = Date.now() - startedAt.current;
+    if (elapsed >= minShowMs) onDone();
+  }, { isActive: isRawModeSupported });
+
   const w = stdout?.columns ?? 80;
   const h = stdout?.rows ?? 24;
+  const dots = '.'.repeat((tick % 4));
+  const blockFrames = ['▉','▊','▋','▌','▍','▎'];
+  const block = blockFrames[tick % blockFrames.length];
+  const title = brandGradient(' S N A K E ');
+
   return (
     <Box width={w} height={h} alignItems="center" justifyContent="center" flexDirection="column">
-      <Text>{brandGradient('██ S N A K E')}</Text>
-      <Text dimColor>{pulse('loading…')}</Text>
+      <Text>{chalk.cyan(block)}{chalk.cyanBright('█')} {title}</Text>
+      <Text dimColor>{`loading${dots}`}</Text>
     </Box>
   );
 }
