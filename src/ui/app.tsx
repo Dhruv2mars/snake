@@ -246,7 +246,7 @@ function Game({onExit, theme, unicode, themeName, setThemeName}:{onExit:()=>void
           <Modal title={brandGradient('Settings')} width={56}>
             <Text>Wrap: {state.wrap ? 'On' : 'Off'}  (W toggle)</Text>
             <Text>Speed: {(1000/state.stepMs).toFixed(0)} cps  (+ / -)</Text>
-            <Text>Theme: {themeName}  (< / > to cycle)</Text>
+            <Text>Theme: {themeName}  ({'<' } / {'>' } to cycle)</Text>
             <Text>Close: S or Esc</Text>
           </Modal>
         </Box>
