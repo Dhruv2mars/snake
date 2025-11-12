@@ -23,21 +23,26 @@ export function Board({state, cellWidth=2}:{state: EngineState; cellWidth?: numb
     const foodColor = lerpColorHex('#ff8a80', colors.food, pulsePhase);
     if (food.x>=0 && food.x<w && food.y>=0 && food.y<h) grid[food.y][food.x] = chalk.hex(foodColor)('●'.repeat(cellWidth));
 
-    // Snake gradient head->tail
+    // Snake gradient head->tail with slight trail easing
     const len = snake.length;
     for (let i=0;i<len;i++){
       const seg = snake[i];
       if (seg.x<0||seg.x>=w||seg.y<0||seg.y>=h) continue;
       const t = i/(Math.max(1,len-1));
       const c = lerpColorHex(colors.snakeHead, colors.snakeTail, t);
-      grid[seg.y][seg.x] = chalk.hex(c)('█'.repeat(cellWidth));
+      const block = (i===0) ? '█' : (i<4 ? '▓' : '█');
+      grid[seg.y][seg.x] = chalk.hex(c)(block.repeat(cellWidth));
     }
 
     // Head ghost toward next cell for smoother perception
     const head = snake[0];
     const n = nextOf(head.x, head.y, state.lastDir, w, h, state.wrap);
-    const ghost = chalk.hex(lerpColorHex(colors.snakeHead, colors.snakeTail, 0.15)).dim('█'.repeat(cellWidth));
-    if (alpha>0.15) grid[n.y][n.x] = ghost;
+    const ghostStrength = Math.max(0, Math.min(1, (alpha-0.15)/0.85));
+    if (ghostStrength>0) {
+      const gc = lerpColorHex(colors.snakeHead, colors.snakeTail, 0.1);
+      const ghostChar = ghostStrength>0.66 ? '▓' : (ghostStrength>0.33 ? '▒' : '░');
+      grid[n.y][n.x] = chalk.hex(gc).dim(ghostChar.repeat(cellWidth));
+    }
 
     return grid.map(row => row.join('')).join('\n');
   }, [w,h,snake,food,cellWidth,state.wrap,state.lastDir,state.timeAccMs,state.stepMs]);
