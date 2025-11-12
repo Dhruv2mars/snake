@@ -4,10 +4,10 @@ import * as Engine from '../engine/index.js';
 import {Board, OverlayDot} from './board.js';
 import {colors, brandGradient, pulse} from './theme.js';
 import chalk from 'chalk';
+import {Modal} from './modal.js';
 
 type Screen = 'splash' | 'menu' | 'game';
-type Overlay = 'none' | 'gameover' | 'pause' | 'menu';
-type Overlay = 'none' | 'gameover' | 'pause';
+type Overlay = 'none' | 'gameover' | 'pause' | 'settings';
 
 export function App(){
   const [screen, setScreen] = useState<Screen>('splash');
@@ -78,9 +78,9 @@ function Game({onExit}:{onExit:()=>void}){
 
   const [state, setState] = useState(() => Engine.initEngine({ width: 36, height: 20, wrap: true, speed: 10 }));
   const [overlay, setOverlay] = useState<Overlay>('none');
-  const [particles, setParticles] = useState<OverlayDot[]>([]);
   const lastScore = useRef<number>(0);
   const lastFood = useRef<{x:number;y:number} | null>(null);
+  const [ripple, setRipple] = useState<{x:number;y:number;r:number;max:number;color:string}|null>(null);
   const last = useRef<number>(Date.now());
   const running = useRef(true);
 
@@ -91,11 +91,12 @@ function Game({onExit}:{onExit:()=>void}){
       const dt = Math.min(50, now - last.current);
       last.current = now;
       setState(s => ((overlay==='none') && s.alive) ? Engine.step(s, dt) : s);
-      // Particle animation decay
-      setParticles(ps => ps.map(p => ({...p, ch: p.ch})).filter((_,i)=>i<999));
+      if (ripple) {
+        setRipple(r => r ? ({...r, r: r.r + 0.75}) : r);
+      }
     }, 16); // ~60 FPS render cadence; engine may step multiple times
     return () => { running.current = false; clearInterval(id); };
-  }, [overlay]);
+  }, [overlay, ripple]);
 
   useInput((input, key) => {
     const lower = input.toLowerCase();
@@ -116,28 +117,30 @@ function Game({onExit}:{onExit:()=>void}){
       return;
     }
 
+    if (overlay==='settings') {
+      if (lower==='s' || key.escape) { setOverlay('none'); return; }
+      if (lower==='w') { setState(s => ({...s, wrap: !s.wrap} as any)); return; }
+      if (lower==='+') { setState(s => Engine.setSpeed(s, Math.min(20, Math.round(1000/s.stepMs)+2))); return; }
+      if (lower==='-') { setState(s => Engine.setSpeed(s, Math.max(4, Math.round(1000/s.stepMs)-2))); return; }
+      return;
+    }
+
     if (key.leftArrow) setState(s => Engine.handleInput(s, 'left'));
     else if (key.rightArrow) setState(s => Engine.handleInput(s, 'right'));
     else if (key.upArrow) setState(s => Engine.handleInput(s, 'up'));
     else if (key.downArrow) setState(s => Engine.handleInput(s, 'down'));
     else if (lower==='r') { setState(() => Engine.initEngine({ width: state.w, height: state.h, wrap: state.wrap, speed: 10 })); setOverlay('none'); }
+    else if (lower==='s') { setOverlay('settings'); }
   }, { isActive: isRawModeSupported });
 
   const w = stdout?.columns ?? 80;
   const h = stdout?.rows ?? 24;
 
-  // Spawn eat particles when score increases
+  // Spawn ripple when score increases
   if (state.score !== lastScore.current) {
     if (state.score > lastScore.current && lastFood.current) {
       const f = lastFood.current;
-      const ring: OverlayDot[] = [];
-      const ringColor = '#ffd166';
-      const pts = [
-        {x:f.x, y:f.y}, {x:f.x+1, y:f.y}, {x:f.x-1, y:f.y}, {x:f.x, y:f.y+1}, {x:f.x, y:f.y-1},
-        {x:f.x+1, y:f.y+1}, {x:f.x-1, y:f.y-1}, {x:f.x+1, y:f.y-1}, {x:f.x-1, y:f.y+1},
-      ];
-      for (const p of pts) ring.push({x:p.x,y:p.y,color:ringColor,ch:'•'});
-      setParticles(ring);
+      setRipple({x:f.x, y:f.y, r:0, max:6, color:'#ffd166'});
     }
     lastScore.current = state.score;
   }
@@ -145,37 +148,74 @@ function Game({onExit}:{onExit:()=>void}){
 
   const showGameOver = !state.alive || overlay==='gameover';
   const showPause = overlay==='pause';
+  const showSettings = overlay==='settings';
+
+  // Build overlay dots from ripple
+  const overlayDots: OverlayDot[] = [];
+  if (ripple) {
+    if (ripple.r > ripple.max) {
+      // let effect decay by removing it next pass
+    } else {
+      const R = Math.round(ripple.r);
+      const c = ripple.color;
+      for (let dx=-R; dx<=R; dx++){
+        const dy = R - Math.abs(dx);
+        overlayDots.push({x:ripple.x+dx,y:ripple.y+dy,color:c,ch:'•'});
+        overlayDots.push({x:ripple.x+dx,y:ripple.y-dy,color:c,ch:'•'});
+      }
+    }
+  }
 
   return (
     <Box width={w} height={h} flexDirection="column">
-      <Box height={1}><Text color={colors.chrome}>▣ Snake</Text><Text> </Text><Text dimColor>Score {state.score} • {state.alive ? 'Playing' : 'Game Over'} (Enter restart, M menu, Q quit)</Text></Box>
+      <Box height={1}>
+        <Text color={colors.chrome}>▣ Snake</Text>
+        <Text>  </Text>
+        <Text dimColor>Score {state.score}</Text>
+        <Text>  </Text>
+        <Text color={overlay==='pause' ? '#f59e0b' : '#94a3b8'}>⏯ P pause</Text>
+        <Text>  </Text>
+        <Text color="#94a3b8">⟲ R restart</Text>
+        <Text>  </Text>
+        <Text color="#94a3b8">⚙ S settings</Text>
+        <Text>  </Text>
+        <Text color="#94a3b8">⏻ Q quit</Text>
+      </Box>
       <Box flexGrow={1} alignItems="center" justifyContent="center">
         <Box borderStyle="round" borderColor={colors.muted} paddingX={1} paddingY={0}>
-          <Board state={state} cellWidth={2} overlays={particles} />
-        </Box>
+          <Board state={state} cellWidth={2} overlays={overlayDots} />
+      </Box>
       </Box>
 
       {showGameOver && (
         <Box position="absolute" width={w} height={h} alignItems="center" justifyContent="center">
-          <Box flexDirection="column" borderStyle="round" borderColor={colors.chrome} padding={1} width={40}>
-            <Text>{brandGradient('Game Over')}</Text>
+          <Modal title={brandGradient('Game Over')} width={48}>
             <Text dimColor>Score {state.score}</Text>
-            <Text>Press Enter to restart</Text>
-            <Text>Press M for menu</Text>
-            <Text dimColor>Q to quit</Text>
-          </Box>
+            <Text>Enter restart</Text>
+            <Text>M menu</Text>
+            <Text dimColor>Q quit</Text>
+          </Modal>
         </Box>
       )}
 
       {showPause && (
         <Box position="absolute" width={w} height={h} alignItems="center" justifyContent="center">
-          <Box flexDirection="column" borderStyle="round" borderColor={colors.chrome} padding={1} width={40}>
-            <Text>{brandGradient('Paused')}</Text>
-            <Text>Enter to resume</Text>
-            <Text>R to restart</Text>
-            <Text>M for menu</Text>
-            <Text dimColor>Q to quit</Text>
-          </Box>
+          <Modal title={brandGradient('Paused')} width={48}>
+            <Text>Enter resume</Text>
+            <Text>R restart</Text>
+            <Text>M menu</Text>
+            <Text dimColor>Q quit</Text>
+          </Modal>
+        </Box>
+      )}
+
+      {showSettings && (
+        <Box position="absolute" width={w} height={h} alignItems="center" justifyContent="center">
+          <Modal title={brandGradient('Settings')} width={54}>
+            <Text>Wrap: {state.wrap ? 'On' : 'Off'}  (W toggle)</Text>
+            <Text>Speed: {(1000/state.stepMs).toFixed(0)} cps  (+ / -)</Text>
+            <Text>Close: S or Esc</Text>
+          </Modal>
         </Box>
       )}
     </Box>
