@@ -2,18 +2,30 @@ import React, {useEffect, useRef, useState} from 'react';
 import {Box, Text, useApp, useInput, useStdin, useStdout} from 'ink';
 import * as Engine from '../engine/index.js';
 import {Board, OverlayDot} from './board.js';
-import {colors, brandGradient, pulse} from './theme.js';
+import {themes, pickTheme, Theme, brandGradient, pulse} from './theme.js';
 import chalk from 'chalk';
 import {Modal} from './modal.js';
+import {detectCaps} from './term.js';
 
 type Screen = 'splash' | 'menu' | 'game';
 type Overlay = 'none' | 'gameover' | 'pause' | 'settings';
 
 export function App(){
   const [screen, setScreen] = useState<Screen>('splash');
+  const caps = detectCaps();
+  const [themeName, setThemeName] = useState<'auto'|'neutral'|'dark'|'light'|'high'|'mono'>('auto');
+  const theme = pickTheme(themeName, caps);
+  const unicode = caps.unicode && theme.unicodePreferred;
   return screen==='splash' ? <Splash onDone={() => setScreen('menu')} />
-    : screen==='menu' ? <Menu onStart={() => setScreen('game')} />
-    : <Game onExit={() => setScreen('menu')} />;
+    : screen==='menu' ? <Menu onStart={() => setScreen('game')} theme={theme} />
+    : <Game onExit={() => setScreen('menu')} theme={theme} unicode={unicode} themeName={themeName} setThemeName={setThemeName} />;
+}
+
+function cycleTheme(curr: string, dir: 1|-1){
+  const order = ['auto','neutral','dark','light','high','mono'];
+  const i = Math.max(0, order.indexOf(curr));
+  const ni = (i + (dir===1?1:-1) + order.length) % order.length;
+  return order[ni] as any;
 }
 
 function Splash({onDone}:{onDone:()=>void}){
@@ -48,7 +60,7 @@ function Splash({onDone}:{onDone:()=>void}){
   );
 }
 
-function Menu({onStart}:{onStart:()=>void}){
+function Menu({onStart, theme}:{onStart:()=>void; theme: Theme}){
   const {exit} = useApp();
   const {stdout} = useStdout();
   const w = stdout?.columns ?? 80;
@@ -63,7 +75,7 @@ function Menu({onStart}:{onStart:()=>void}){
   return (
     <Box width={w} height={h} alignItems="center" justifyContent="center" flexDirection="column">
       <Text>{brandGradient('▣ Snake CLI')}</Text>
-      <Text color={colors.muted}>The best-looking terminal game</Text>
+      <Text color={theme.muted}>The best-looking terminal game</Text>
       <Box height={1} />
       <Text>{pointer} Press Enter to Play</Text>
       <Text dimColor>Q to Quit</Text>
@@ -71,7 +83,7 @@ function Menu({onStart}:{onStart:()=>void}){
   );
 }
 
-function Game({onExit}:{onExit:()=>void}){
+function Game({onExit, theme, unicode, themeName, setThemeName}:{onExit:()=>void; theme: Theme; unicode: boolean; themeName: string; setThemeName: React.Dispatch<React.SetStateAction<any>>}){
   const {exit} = useApp();
   const {stdout} = useStdout();
   const {isRawModeSupported} = useStdin();
@@ -129,6 +141,8 @@ function Game({onExit}:{onExit:()=>void}){
       if (lower==='w') { setState(s => ({...s, wrap: !s.wrap} as any)); return; }
       if (lower==='+') { setState(s => Engine.setSpeed(s, Math.min(20, Math.round(1000/s.stepMs)+2))); return; }
       if (lower==='-') { setState(s => Engine.setSpeed(s, Math.max(4, Math.round(1000/s.stepMs)-2))); return; }
+      if (key.leftArrow || lower==='<') { setThemeName((n:string)=> cycleTheme(n,-1)); return; }
+      if (key.rightArrow || lower==='>') { setThemeName((n:string)=> cycleTheme(n,1)); return; }
       return;
     }
 
@@ -176,7 +190,7 @@ function Game({onExit}:{onExit:()=>void}){
   return (
     <Box width={w} height={h} flexDirection="column">
       <Box height={1}>
-        <Text color={colors.chrome}>▣ Snake</Text>
+        <Text color={theme.chrome}>▣ Snake</Text>
         <Text>  </Text>
         <Text dimColor>Score {displayScore}</Text>
         <Text>  </Text>
@@ -189,9 +203,9 @@ function Game({onExit}:{onExit:()=>void}){
         <Text color="#94a3b8">⏻ Q quit</Text>
       </Box>
       <Box flexGrow={1} alignItems="center" justifyContent="center">
-        <Box borderStyle="round" borderColor={colors.muted} paddingX={1} paddingY={0}>
-          <Board state={state} cellWidth={2} overlays={overlayDots} />
-      </Box>
+        <Box borderStyle="round" borderColor={theme.muted} paddingX={1} paddingY={0}>
+          <Board state={state} cellWidth={2} overlays={overlayDots} theme={theme} unicode={unicode} />
+        </Box>
       </Box>
 
       {showGameOver && (
@@ -218,9 +232,10 @@ function Game({onExit}:{onExit:()=>void}){
 
       {showSettings && (
         <Box position="absolute" width={w} height={h} alignItems="center" justifyContent="center">
-          <Modal title={brandGradient('Settings')} width={54}>
+          <Modal title={brandGradient('Settings')} width={56}>
             <Text>Wrap: {state.wrap ? 'On' : 'Off'}  (W toggle)</Text>
             <Text>Speed: {(1000/state.stepMs).toFixed(0)} cps  (+ / -)</Text>
+            <Text>Theme: {themeName}  (< / > to cycle)</Text>
             <Text>Close: S or Esc</Text>
           </Modal>
         </Box>
