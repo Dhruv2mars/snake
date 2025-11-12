@@ -2,6 +2,7 @@ export type Particle = {
   x: number; y: number;
   vx: number; vy: number;
   life: number; // frames remaining
+  max: number;  // initial life to compute fade
   color: string;
   ch?: string;
 };
@@ -11,7 +12,8 @@ export function spawnBurst(cx: number, cy: number, color: string, count=24): Par
   for (let i=0;i<count;i++){
     const angle = (Math.PI * 2) * (i / count) + (Math.random()*0.4-0.2);
     const speed = 0.3 + Math.random()*0.7;
-    ps.push({ x: cx, y: cy, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, life: 20 + (Math.random()*10)|0, color, ch: '•' });
+    const life = 18 + (Math.random()*12)|0;
+    ps.push({ x: cx, y: cy, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, life, max: life, color, ch: '•' });
   }
   return ps;
 }
@@ -27,4 +29,3 @@ export function stepParticles(ps: Particle[], w: number, h: number): Particle[] 
   }
   return out;
 }
-

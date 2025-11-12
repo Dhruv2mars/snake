@@ -7,6 +7,7 @@ import chalk from 'chalk';
 import {Modal} from './modal.js';
 import {detectCaps} from './term.js';
 import {spawnBurst, stepParticles, Particle} from './particles.js';
+import {lerpColorHex} from './theme.js';
 
 type Screen = 'splash' | 'menu' | 'game';
 type Overlay = 'none' | 'gameover' | 'pause' | 'settings';
@@ -102,6 +103,7 @@ function Game({onExit, theme, unicode, themeName, setThemeName, reducedMotion}:{
   const [particles, setParticles] = useState<Particle[]>([]);
   const [ambient, setAmbient] = useState(0);
   const [displayScore, setDisplayScore] = useState(0);
+  const [scorePulse, setScorePulse] = useState(0);
   const last = useRef<number>(Date.now());
   const running = useRef(true);
 
@@ -120,6 +122,7 @@ function Game({onExit, theme, unicode, themeName, setThemeName, reducedMotion}:{
         setAmbient(a => (a + 0.02) % 1);
       }
       setDisplayScore(s => (s < state.score ? Math.min(state.score, s + 1) : s));
+      setScorePulse(p => Math.max(0, p - 1));
     }, 16); // ~60 FPS render cadence; engine may step multiple times
     return () => { running.current = false; clearInterval(id); };
   }, [overlay, ripple]);
@@ -170,6 +173,7 @@ function Game({onExit, theme, unicode, themeName, setThemeName, reducedMotion}:{
       const f = lastFood.current;
       setRipple({x:f.x, y:f.y, r:0, max:6, color:'#ffd166'});
       if (!reducedMotion) setParticles(ps => ps.concat(spawnBurst(f.x, f.y, '#ffd166', 18)));
+      setScorePulse(10);
     }
     lastScore.current = state.score;
   }
@@ -195,7 +199,10 @@ function Game({onExit, theme, unicode, themeName, setThemeName, reducedMotion}:{
     }
   }
   for (const p of particles) {
-    overlayDots.push({ x: Math.round(p.x), y: Math.round(p.y), color: p.color, ch: p.ch ?? '•' });
+    const t = p.life / p.max; // 1..0
+    const ch = t > 0.66 ? '•' : (t > 0.33 ? '·' : '.');
+    const color = lerpColorHex(p.color, theme.muted, 1 - t);
+    overlayDots.push({ x: Math.round(p.x), y: Math.round(p.y), color, ch });
   }
 
   return (
@@ -203,7 +210,7 @@ function Game({onExit, theme, unicode, themeName, setThemeName, reducedMotion}:{
       <Box height={1}>
         <Text color={theme.chrome}>▣ Snake</Text>
         <Text>  </Text>
-        <Text dimColor>Score {displayScore}</Text>
+        <Text color={scorePulse>0 ? theme.badgePlaying : undefined} dimColor={scorePulse<=0}>Score {displayScore}</Text>
         <Text>  </Text>
         <Text color={overlay==='pause' ? '#f59e0b' : '#94a3b8'}>⏯ P pause</Text>
         <Text>  </Text>
