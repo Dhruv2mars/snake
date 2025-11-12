@@ -2,6 +2,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import {Box, Text, useApp, useInput, useStdin, useStdout} from 'ink';
 import * as Engine from '../engine/index.js';
 import {Board} from './board.js';
+import {colors, brandGradient, pulse} from './theme.js';
 
 type Screen = 'splash' | 'menu' | 'game';
 
@@ -22,8 +23,9 @@ function Splash({onDone}:{onDone:()=>void}){
   const w = stdout?.columns ?? 80;
   const h = stdout?.rows ?? 24;
   return (
-    <Box width={w} height={h} alignItems="center" justifyContent="center">
-      <Text color="#00D1B2">■ Snake</Text>
+    <Box width={w} height={h} alignItems="center" justifyContent="center" flexDirection="column">
+      <Text>{brandGradient('██ S N A K E')}</Text>
+      <Text dimColor>{pulse('loading…')}</Text>
     </Box>
   );
 }
@@ -37,10 +39,16 @@ function Menu({onStart}:{onStart:()=>void}){
     if (key.return) onStart();
     if (input.toLowerCase()==='q' || key.escape) exit();
   });
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const id = setInterval(()=>setTick(t=>t+1),120); return ()=>clearInterval(id); }, []);
+  const pointer = tick % 2 === 0 ? '›' : '»';
   return (
     <Box width={w} height={h} alignItems="center" justifyContent="center" flexDirection="column">
-      <Text color="#14b8a6">Snake CLI</Text>
-      <Text dimColor>Press Enter to Play • Q to Quit</Text>
+      <Text>{brandGradient('▣ Snake CLI')}</Text>
+      <Text color={colors.muted}>The best-looking terminal game</Text>
+      <Box height={1} />
+      <Text>{pointer} Press Enter to Play</Text>
+      <Text dimColor>Q to Quit</Text>
     </Box>
   );
 }
@@ -50,7 +58,7 @@ function Game({onExit}:{onExit:()=>void}){
   const {stdout} = useStdout();
   const {isRawModeSupported} = useStdin();
 
-  const [state, setState] = useState(() => Engine.initEngine({ width: 32, height: 18, wrap: true, speed: 12 }));
+  const [state, setState] = useState(() => Engine.initEngine({ width: 36, height: 20, wrap: true, speed: 8 }));
   const last = useRef<number>(Date.now());
   const running = useRef(true);
 
@@ -80,11 +88,10 @@ function Game({onExit}:{onExit:()=>void}){
 
   return (
     <Box width={w} height={h} flexDirection="column">
-      <Box height={1}><Text color="#64748b">■ Snake • Score {state.score} • {state.alive ? 'Playing' : 'Game Over'} (R to reset, Q to quit)</Text></Box>
+      <Box height={1}><Text color={colors.chrome}>▣ Snake</Text><Text> </Text><Text dimColor>Score {state.score} • {state.alive ? 'Playing' : 'Game Over'} (R reset, Q quit)</Text></Box>
       <Box flexGrow={1} alignItems="center" justifyContent="center">
         <Board state={state} cellWidth={2} />
       </Box>
     </Box>
   );
 }
-

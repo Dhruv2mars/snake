@@ -22,6 +22,8 @@ export type EngineState = {
   timeAccMs: number;
   stepMs: number;
   rng: () => number;
+  // for smoother rendering
+  lastDir: Direction;
 };
 
 export function initEngine(cfg: EngineConfig): EngineState {
@@ -34,6 +36,7 @@ export function initEngine(cfg: EngineConfig): EngineState {
     wrap: cfg.wrap,
     snake,
     dir: 'right',
+    lastDir: 'right',
     pendingDir: null,
     food: { x: 0, y: 0 },
     score: 0,
@@ -94,6 +97,7 @@ function tickOnce(st: EngineState): EngineState {
     ...st,
     snake: body,
     dir,
+    lastDir: dir,
     pendingDir: null,
     food: nextFood,
     score: ate ? st.score + 1 : st.score,
@@ -142,4 +146,3 @@ function mulberry32(seed: number): () => number {
     return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
   };
 }
-
