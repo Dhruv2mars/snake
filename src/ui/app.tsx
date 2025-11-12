@@ -6,6 +6,7 @@ import {themes, pickTheme, Theme, brandGradient, pulse} from './theme.js';
 import chalk from 'chalk';
 import {Modal} from './modal.js';
 import {detectCaps} from './term.js';
+import {spawnBurst, stepParticles, Particle} from './particles.js';
 
 type Screen = 'splash' | 'menu' | 'game';
 type Overlay = 'none' | 'gameover' | 'pause' | 'settings';
@@ -98,6 +99,8 @@ function Game({onExit, theme, unicode, themeName, setThemeName}:{onExit:()=>void
   const lastScore = useRef<number>(0);
   const lastFood = useRef<{x:number;y:number} | null>(null);
   const [ripple, setRipple] = useState<{x:number;y:number;r:number;max:number;color:string}|null>(null);
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const [ambient, setAmbient] = useState(0);
   const [displayScore, setDisplayScore] = useState(0);
   const last = useRef<number>(Date.now());
   const running = useRef(true);
@@ -111,6 +114,10 @@ function Game({onExit, theme, unicode, themeName, setThemeName}:{onExit:()=>void
       setState(s => ((overlay==='none') && s.alive) ? Engine.step(s, dt) : s);
       if (ripple) {
         setRipple(r => r ? ({...r, r: r.r + 0.75}) : r);
+      }
+      if (!caps.reducedMotion) {
+        setParticles(ps => stepParticles(ps, state.w, state.h));
+        setAmbient(a => (a + 0.02) % 1);
       }
       setDisplayScore(s => (s < state.score ? Math.min(state.score, s + 1) : s));
     }, 16); // ~60 FPS render cadence; engine may step multiple times
@@ -162,6 +169,7 @@ function Game({onExit, theme, unicode, themeName, setThemeName}:{onExit:()=>void
     if (state.score > lastScore.current && lastFood.current) {
       const f = lastFood.current;
       setRipple({x:f.x, y:f.y, r:0, max:6, color:'#ffd166'});
+      if (!caps.reducedMotion) setParticles(ps => ps.concat(spawnBurst(f.x, f.y, '#ffd166', 18)));
     }
     lastScore.current = state.score;
   }
@@ -186,6 +194,9 @@ function Game({onExit, theme, unicode, themeName, setThemeName}:{onExit:()=>void
       }
     }
   }
+  for (const p of particles) {
+    overlayDots.push({ x: Math.round(p.x), y: Math.round(p.y), color: p.color, ch: p.ch ?? '•' });
+  }
 
   return (
     <Box width={w} height={h} flexDirection="column">
@@ -204,7 +215,7 @@ function Game({onExit, theme, unicode, themeName, setThemeName}:{onExit:()=>void
       </Box>
       <Box flexGrow={1} alignItems="center" justifyContent="center">
         <Box borderStyle="round" borderColor={theme.muted} paddingX={1} paddingY={0}>
-          <Board state={state} cellWidth={2} overlays={overlayDots} theme={theme} unicode={unicode} />
+          <Board state={state} cellWidth={2} overlays={overlayDots} theme={theme} unicode={unicode} ambient={ambient} />
         </Box>
       </Box>
 

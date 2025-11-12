@@ -12,13 +12,14 @@ function nextOf(x:number,y:number,dir:Direction,w:number,h:number,wrap:boolean){
 
 export type OverlayDot = { x:number; y:number; color:string; ch?:string };
 
-export function Board({state, cellWidth=2, overlays=[], theme=themes.neutral, unicode=true}:{state: EngineState; cellWidth?: number; overlays?: OverlayDot[]; theme?: Theme; unicode?: boolean}){
+export function Board({state, cellWidth=2, overlays=[], theme=themes.neutral, unicode=true, ambient=0}:{state: EngineState; cellWidth?: number; overlays?: OverlayDot[]; theme?: Theme; unicode?: boolean; ambient?: number}){
   const {w, h, snake, food} = state;
   const alpha = state.timeAccMs / state.stepMs; // 0..1 time to next step
 
   const out = useMemo(() => {
     const gridDot = unicode ? '·' : '.';
-    const dot = chalk.hex(theme.grid)(gridDot.repeat(cellWidth));
+    const gridColor = lerpColorHex(theme.border, theme.grid, 0.6 + 0.2*Math.sin(ambient*2*Math.PI));
+    const dot = chalk.hex(gridColor)(gridDot.repeat(cellWidth));
     const grid: string[][] = Array.from({length: h}, () => Array<string>(w).fill(dot));
 
     // Food (pulsing)
