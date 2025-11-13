@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import {paint, chalk} from './ansi.js';
 import type {TermCaps} from './term.js';
 
 export type Theme = {
@@ -57,7 +57,7 @@ export function pickTheme(name: string, caps: TermCaps): Theme {
 export function brandGradient(text: string): string {
   const palette = ['#22d3ee','#38bdf8','#60a5fa','#a78bfa','#f472b6','#f59e0b','#22c55e'];
   const chars = [...text];
-  return chars.map((c,i)=>chalk.hex(palette[i%palette.length])(c)).join('');
+  return chars.map((c,i)=>paint(palette[i%palette.length], c)).join('');
 }
 
 export function lerpColorHex(aHex: string, bHex: string, t: number): string {
@@ -73,5 +73,5 @@ export function lerpColorHex(aHex: string, bHex: string, t: number): string {
 export function pulse(text: string, t: number = Date.now()): string {
   const phase = (Math.sin(t/240) + 1) / 2; // 0..1
   const c = lerpColorHex('#94a3b8', '#e2e8f0', phase);
-  return chalk.hex(c)(text);
+  return paint(c, text);
 }

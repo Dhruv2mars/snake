@@ -1,6 +1,6 @@
 import React, {useMemo} from 'react';
 import {Text} from 'ink';
-import chalk from 'chalk';
+import {paint} from './ansi.js';
 import type {EngineState, Direction} from '../engine/index.js';
 import {lerpColorHex, Theme, themes} from './theme.js';
 
@@ -19,14 +19,14 @@ export function Board({state, cellWidth=2, overlays=[], theme=themes.neutral, un
   const out = useMemo(() => {
     const gridDot = unicode ? '·' : '.';
     const gridColor = lerpColorHex(theme.border, theme.grid, 0.6 + 0.2*Math.sin(ambient*2*Math.PI));
-    const dot = chalk.hex(gridColor)(gridDot.repeat(cellWidth));
+    const dot = paint(gridColor, gridDot.repeat(cellWidth));
     const grid: string[][] = Array.from({length: h}, () => Array<string>(w).fill(dot));
 
     // Food (pulsing)
     const pulsePhase = (Math.sin(Date.now()/180) + 1) / 2;
     const foodColor = lerpColorHex('#ff8a80', theme.food, pulsePhase);
     const foodCh = unicode ? '●' : 'o';
-    if (food.x>=0 && food.x<w && food.y>=0 && food.y<h) grid[food.y][food.x] = chalk.hex(foodColor)(foodCh.repeat(cellWidth));
+    if (food.x>=0 && food.x<w && food.y>=0 && food.y<h) grid[food.y][food.x] = paint(foodColor, foodCh.repeat(cellWidth));
 
     // Snake gradient head->tail with slight trail easing
     const len = snake.length;
@@ -36,12 +36,12 @@ export function Board({state, cellWidth=2, overlays=[], theme=themes.neutral, un
       const t = i/(Math.max(1,len-1));
       const c = lerpColorHex(theme.snakeHead, theme.snakeTail, t);
       const block = !unicode ? '#' : (i===0 ? '█' : (i<4 ? '▓' : '█'));
-      grid[seg.y][seg.x] = chalk.hex(c)(block.repeat(cellWidth));
+      grid[seg.y][seg.x] = paint(c, block.repeat(cellWidth));
     }
 
     // Effects overlays (particles/ripples)
     for (const p of overlays) {
-      if (p.x>=0 && p.x<w && p.y>=0 && p.y<h) grid[p.y][p.x] = chalk.hex(p.color)((p.ch ?? '•').repeat(cellWidth));
+      if (p.x>=0 && p.x<w && p.y>=0 && p.y<h) grid[p.y][p.x] = paint(p.color, (p.ch ?? '•').repeat(cellWidth));
     }
 
     // Head ghost toward next cell for smoother perception
@@ -51,7 +51,7 @@ export function Board({state, cellWidth=2, overlays=[], theme=themes.neutral, un
     if (ghostStrength>0) {
       const gc = lerpColorHex(theme.snakeHead, theme.snakeTail, 0.1);
       const ghostChar = !unicode ? '#' : (ghostStrength>0.66 ? '▓' : (ghostStrength>0.33 ? '▒' : '░'));
-      grid[n.y][n.x] = chalk.hex(gc).dim(ghostChar.repeat(cellWidth));
+      grid[n.y][n.x] = paint(gc, ghostChar.repeat(cellWidth));
     }
 
     return grid.map(row => row.join('')).join('\n');

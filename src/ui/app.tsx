@@ -3,7 +3,7 @@ import {Box, Text, useApp, useInput, useStdin, useStdout} from 'ink';
 import * as Engine from '../engine/index.js';
 import {Board, OverlayDot} from './board.js';
 import {themes, pickTheme, Theme, brandGradient, pulse} from './theme.js';
-import chalk from 'chalk';
+import {chalk} from './ansi.js';
 import {Modal} from './modal.js';
 import {detectCaps} from './term.js';
 import {spawnBurst, stepParticles, Particle} from './particles.js';
